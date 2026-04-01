@@ -2,79 +2,53 @@
 """Scrape Game Nerdz Deal of the Day and notify via ntfy."""
 
 import argparse
-import base64
 import json
-import re
 import sys
 import requests
+from playwright.sync_api import sync_playwright
 
 URL = "https://www.gamenerdz.com/deal-of-the-day"
-STOREPASS_API = "https://store.storepass.co"
-STORE_ID = "OvpVz0pNlL"
 NTFY_TOPIC = "yrvn-gz"
 NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    )
-}
-
 
 def scrape_deal():
-    resp = requests.get(URL, headers=HEADERS, timeout=15)
-    resp.raise_for_status()
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        page.goto(URL, wait_until="networkidle")
+        page.wait_for_selector(".product-imports .card", timeout=15000)
 
-    # Product data is in a base64-encoded bodl JSON blob
-    m = re.search(r'window\.bodl\s*=\s*JSON\.parse\(decodeBase64\("([^"]+)"\)', resp.text)
-    if not m:
-        with open("debug.html", "w") as f:
-            f.write(resp.text)
-        print("FAIL:no bodl data found, saved debug.html")
-        sys.exit(1)
+        deal = page.evaluate("""() => {
+            const card = document.querySelector('.product-imports .card');
+            if (!card) return null;
+            const title = card.querySelector('.card-title a, .card-title, h4 a');
+            const price = card.querySelector('.price--withoutTax, .price--main, .sale-price');
+            const stock = card.querySelector('.stock-level, .storepass-stock, [class*=stock], [class*=quantity]');
+            return {
+                title: title ? title.innerText.trim() : null,
+                price: price ? price.innerText.trim() : null,
+                stock: stock ? stock.innerText.trim() : null,
+            };
+        }""")
 
-    data = json.loads(base64.b64decode(m.group(1)))
-    items = data["events"][0]["bodl_v1_product_category_viewed"]["line_items"]
-    if not items:
-        print("FAIL:no items in deal")
-        sys.exit(1)
+        if not deal or not deal.get("title"):
+            # Fallback: grab all visible text from the product area
+            debug = page.evaluate("""() => {
+                const el = document.querySelector('.product-imports');
+                return el ? el.innerText : document.body.innerText.substring(0, 2000);
+            }""")
+            browser.close()
+            print(f"FAIL:selectors missed|{debug[:500]}")
+            sys.exit(1)
 
-    item = items[0]
-    title = item["product_name"]
-    sale_price = item["sale_price"]
-    retail_price = item["retail_price"]
-    discount = item["discount"]
-
-    # Try to get stock from StorePass API
-    stock = get_stock(item["product_id"])
+        browser.close()
 
     return {
-        "title": title,
-        "price": f"${sale_price:.2f} (was ${retail_price:.2f}, save ${discount:.2f})",
-        "stock": stock,
+        "title": deal["title"],
+        "price": deal.get("price") or "N/A",
+        "stock": deal.get("stock") or "N/A",
     }
-
-
-def get_stock(product_id):
-    try:
-        resp = requests.get(
-            f"{STOREPASS_API}/saas/category/223/products",
-            params={"store_id": STORE_ID},
-            headers=HEADERS,
-            timeout=10,
-        )
-        if resp.ok:
-            products = resp.json()
-            for p in products if isinstance(products, list) else []:
-                pid = str(p.get("product_id", p.get("id", "")))
-                if pid == str(product_id):
-                    qty = p.get("stock", p.get("inventory_quantity", p.get("quantity")))
-                    if qty is not None:
-                        return f"{qty} left"
-    except Exception:
-        pass
-    return "N/A"
 
 
 def notify(deal):
