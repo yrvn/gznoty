@@ -73,6 +73,8 @@ def get_stock(product_id):
             headers=HEADERS,
             timeout=10,
         )
+        with open("debug_stock.txt", "w") as f:
+            f.write(f"status:{resp.status_code}\n{resp.text[:3000]}")
         if resp.ok:
             data = resp.json()
             products = data.get("products", data) if isinstance(data, dict) else data
@@ -85,8 +87,9 @@ def get_stock(product_id):
                 if inv and isinstance(inv, list):
                     total = sum(i.get("quantity", 0) for i in inv)
                     return f"{total} left"
-    except Exception:
-        pass
+    except Exception as e:
+        with open("debug_stock.txt", "w") as f:
+            f.write(f"exception:{e}")
     return "N/A"
 
 
