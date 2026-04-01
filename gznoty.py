@@ -12,68 +12,33 @@ NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
 
 
 def scrape_deal():
-    api_responses = []
-
-    def capture_response(response):
-        if "storepass.co/saas/search" in response.url:
-            try:
-                api_responses.append(response.json())
-            except Exception:
-                pass
-
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.on("response", capture_response)
         page.goto(URL, wait_until="networkidle", timeout=30000)
+        # Wait a bit more for StorePass JS to render products
+        page.wait_for_timeout(5000)
+
+        # Dump the product area HTML so we can see the real structure
+        debug = page.evaluate("""() => {
+            const el = document.querySelector('.product-imports');
+            if (el && el.innerHTML.trim().length > 0) return el.innerHTML.substring(0, 3000);
+            // fallback: dump all classes on the page that mention product/stock/card
+            const all = [...document.querySelectorAll('*')];
+            const relevant = all.filter(e => {
+                const cls = e.className?.toString() || '';
+                return /product|stock|card|deal|price|inventory/i.test(cls);
+            });
+            return relevant.map(e => e.tagName + '.' + e.className + '=' + e.innerText?.substring(0, 100)).join('\\n');
+        }""")
+
         browser.close()
 
-    if not api_responses:
-        print("FAIL:no storepass API calls captured")
-        sys.exit(1)
-
-    # Find the response with products
-    for data in api_responses:
-        products = data.get("products", [])
-        if products:
-            p = products[0]
-            return {
-                "title": p.get("name", "N/A"),
-                "price": f"${p['salePrice']}" if p.get("salePrice") else p.get("price", "N/A"),
-                "stock": f"{p['stock']} left" if p.get("stock") is not None else "N/A",
-            }
-
-    print("FAIL:API responded but no products")
-    sys.exit(1)
-
-
-def notify(deal):
-    body = f"{deal['title']}\nPrice: {deal['price']}\nStock: {deal['stock']}"
-    resp = requests.post(
-        NTFY_URL,
-        data=body.encode(),
-        headers={
-            "Title": "GN Deal of the Day",
-            "Tags": "game_die,moneybag",
-        },
-        timeout=10,
-    )
-    resp.raise_for_status()
-    print(f"OK:{body}")
+    print(debug)
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--test", action="store_true")
-    args = parser.parse_args()
-
-    deal = scrape_deal()
-
-    if args.test:
-        print(f"{deal['title']}|{deal['price']}|{deal['stock']}")
-        return
-
-    notify(deal)
+    scrape_deal()
 
 
 if __name__ == "__main__":
