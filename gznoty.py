@@ -2,6 +2,7 @@
 """Scrape Game Nerdz Deal of the Day and notify via ntfy."""
 
 import argparse
+import re
 import sys
 import requests
 from playwright.sync_api import sync_playwright
@@ -35,15 +36,26 @@ def scrape_deal():
     return {"title": title, "price": price_str, "stock": stock}
 
 
-def notify(deal):
+LOW_STOCK_THRESHOLD = 20
+
+
+def get_stock_number(stock_str):
+    m = re.search(r"(\d+)", stock_str)
+    return int(m.group(1)) if m else None
+
+
+def notify(deal, low_stock=False):
+    if low_stock:
+        title = "LOW STOCK: GN Deal of the Day"
+        tags = "warning,game_die"
+    else:
+        title = "GN Deal of the Day"
+        tags = "game_die,moneybag"
     body = f"{deal['title']}\nPrice: {deal['price']}\nStock: {deal['stock']}"
     resp = requests.post(
         NTFY_URL,
         data=body.encode(),
-        headers={
-            "Title": "GN Deal of the Day",
-            "Tags": "game_die,moneybag",
-        },
+        headers={"Title": title, "Tags": tags, "Priority": "5" if low_stock else "3"},
         timeout=10,
     )
     resp.raise_for_status()
@@ -53,12 +65,22 @@ def notify(deal):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", action="store_true")
+    parser.add_argument("--low-stock", action="store_true",
+                        help="Only notify if stock < 20")
     args = parser.parse_args()
 
     deal = scrape_deal()
 
     if args.test:
         print(f"{deal['title']}|{deal['price']}|{deal['stock']}")
+
+    if args.low_stock:
+        qty = get_stock_number(deal["stock"])
+        if qty is not None and qty < LOW_STOCK_THRESHOLD:
+            notify(deal, low_stock=True)
+        else:
+            print(f"SKIP:stock is {qty}, above {LOW_STOCK_THRESHOLD}")
+        return
 
     notify(deal)
 
