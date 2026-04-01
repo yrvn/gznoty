@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Scrape Game Nerdz Deal of the Day and notify via ntfy."""
 
+import argparse
 import sys
 import requests
 from bs4 import BeautifulSoup
@@ -84,6 +85,18 @@ def notify(deal):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Game Nerdz Deal of the Day notifier")
+    parser.add_argument("--test", action="store_true", help="Send a test notification")
+    args = parser.parse_args()
+
+    if args.test:
+        notify({
+            "title": "Test Deal - Settlers of Catan",
+            "price": "$19.97",
+            "stock": "42 remaining",
+        })
+        return
+
     deal = scrape_deal()
     notify(deal)
 
