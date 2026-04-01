@@ -92,11 +92,7 @@ def main():
     deal = scrape_deal()
 
     if args.test:
-        print("=== Deal of the Day ===")
-        print(f"Item:  {deal['title']}")
-        print(f"Price: {deal['price']}")
-        print(f"Stock: {deal['stock']}")
-        print("(test mode — notification not sent)")
+        print(f"{deal['title']}|{deal['price']}|{deal['stock']}")
         return
 
     notify(deal)
