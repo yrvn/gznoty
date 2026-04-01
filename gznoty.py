@@ -12,43 +12,39 @@ NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
 
 
 def scrape_deal():
+    api_responses = []
+
+    def capture_response(response):
+        if "storepass.co/saas/search" in response.url:
+            try:
+                api_responses.append(response.json())
+            except Exception:
+                pass
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        page.goto(URL, wait_until="networkidle")
-        page.wait_for_selector(".product-imports .card", timeout=15000)
-
-        deal = page.evaluate("""() => {
-            const card = document.querySelector('.product-imports .card');
-            if (!card) return null;
-            const title = card.querySelector('.card-title a') || card.querySelector('a');
-            const price = card.querySelector('[class*=price]');
-            const stock = card.querySelector('[class*=stock]')
-                || card.querySelector('[class*=quantity]')
-                || card.querySelector('[class*=inventory]');
-            return {
-                title: title ? title.innerText.trim() : null,
-                price: price ? price.innerText.trim() : null,
-                stock: stock ? stock.innerText.trim() : null,
-            };
-        }""")
-
-        if not deal or not deal.get("title"):
-            debug = page.evaluate("""() => {
-                const el = document.querySelector('.product-imports');
-                return el ? el.innerText.substring(0, 500) : 'no .product-imports';
-            }""")
-            browser.close()
-            print(f"FAIL:{debug}")
-            sys.exit(1)
-
+        page.on("response", capture_response)
+        page.goto(URL, wait_until="networkidle", timeout=30000)
         browser.close()
 
-    return {
-        "title": deal["title"],
-        "price": deal.get("price") or "N/A",
-        "stock": deal.get("stock") or "N/A",
-    }
+    if not api_responses:
+        print("FAIL:no storepass API calls captured")
+        sys.exit(1)
+
+    # Find the response with products
+    for data in api_responses:
+        products = data.get("products", [])
+        if products:
+            p = products[0]
+            return {
+                "title": p.get("name", "N/A"),
+                "price": f"${p['salePrice']}" if p.get("salePrice") else p.get("price", "N/A"),
+                "stock": f"{p['stock']} left" if p.get("stock") is not None else "N/A",
+            }
+
+    print("FAIL:API responded but no products")
+    sys.exit(1)
 
 
 def notify(deal):
