@@ -16,29 +16,52 @@ def scrape_deal():
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         page.goto(URL, wait_until="networkidle", timeout=30000)
-        # Wait a bit more for StorePass JS to render products
-        page.wait_for_timeout(5000)
+        page.wait_for_selector(".store-pass-product-name", timeout=15000)
 
-        # Dump the product area HTML so we can see the real structure
-        debug = page.evaluate("""() => {
-            const el = document.querySelector('.product-imports');
-            if (el && el.innerHTML.trim().length > 0) return el.innerHTML.substring(0, 3000);
-            // fallback: dump all classes on the page that mention product/stock/card
-            const all = [...document.querySelectorAll('*')];
-            const relevant = all.filter(e => {
-                const cls = e.className?.toString() || '';
-                return /product|stock|card|deal|price|inventory/i.test(cls);
-            });
-            return relevant.map(e => e.tagName + '.' + e.className + '=' + e.innerText?.substring(0, 100)).join('\\n');
-        }""")
+        title = page.text_content(".store-pass-product-name")
+        price = page.text_content(".store-pass-product-price")
+        msrp = page.text_content(".store-pass-product-msrp")
+        stock = page.text_content(".store-pass-product-stock-row")
 
         browser.close()
 
-    print(debug)
+    title = title.strip() if title else "N/A"
+    price = price.strip() if price else "N/A"
+    msrp = msrp.strip() if msrp else ""
+    stock = stock.strip() if stock else "N/A"
+
+    price_str = f"{price} (was {msrp})" if msrp else price
+
+    return {"title": title, "price": price_str, "stock": stock}
+
+
+def notify(deal):
+    body = f"{deal['title']}\nPrice: {deal['price']}\nStock: {deal['stock']}"
+    resp = requests.post(
+        NTFY_URL,
+        data=body.encode(),
+        headers={
+            "Title": "GN Deal of the Day",
+            "Tags": "game_die,moneybag",
+        },
+        timeout=10,
+    )
+    resp.raise_for_status()
+    print(f"OK:{body}")
 
 
 def main():
-    scrape_deal()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--test", action="store_true")
+    args = parser.parse_args()
+
+    deal = scrape_deal()
+
+    if args.test:
+        print(f"{deal['title']}|{deal['price']}|{deal['stock']}")
+        return
+
+    notify(deal)
 
 
 if __name__ == "__main__":
