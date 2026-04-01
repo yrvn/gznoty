@@ -59,13 +59,32 @@ def scrape_deal():
 
 
 def get_stock(product_id):
-    # Download storepass.js to find the real API endpoints
-    js_url = "https://cdn11.bigcommerce.com/s-ua4dd/stencil/3ca265d0-0f61-013f-f895-561599f7e7fe/e/7f85f4d0-0c65-013f-a03a-36a471d72550/storepass.js"
+    params = {
+        "store_id": STORE_ID,
+        "big_commerce_category_ids": str(CATEGORY_ID),
+        "mongo": "true",
+        "limit": "1",
+        "fields": "id,productId,stock,availability,name,inventoryLevels",
+    }
     try:
-        resp = requests.get(js_url, headers=HEADERS, timeout=10)
+        resp = requests.get(
+            "https://store.storepass.co/saas/search",
+            params=params,
+            headers=HEADERS,
+            timeout=10,
+        )
         if resp.ok:
-            with open("debug_storepass.js", "w") as f:
-                f.write(resp.text)
+            data = resp.json()
+            products = data.get("products", data) if isinstance(data, dict) else data
+            if isinstance(products, list) and products:
+                p = products[0]
+                stock = p.get("stock")
+                if stock is not None:
+                    return f"{stock} left"
+                inv = p.get("inventoryLevels")
+                if inv and isinstance(inv, list):
+                    total = sum(i.get("quantity", 0) for i in inv)
+                    return f"{total} left"
     except Exception:
         pass
     return "N/A"
