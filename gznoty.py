@@ -49,7 +49,7 @@ def scrape_deal():
         sys.exit(1)
 
     item = items[0]
-    stock = get_stock(item["product_id"])
+    stock = get_stock(item["product_name"])
 
     return {
         "title": item["product_name"],
@@ -58,12 +58,13 @@ def scrape_deal():
     }
 
 
-def get_stock(product_id):
+def get_stock(product_name):
     params = {
         "store_id": STORE_ID,
-        "big_commerce_category_ids": str(CATEGORY_ID),
+        "name": product_name,
         "mongo": "true",
         "limit": "1",
+        "sort": "Relevance",
         "fields": "id,productId,stock,availability,name,inventoryLevels",
     }
     try:
