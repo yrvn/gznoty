@@ -49,7 +49,7 @@ def scrape_deal():
         sys.exit(1)
 
     item = items[0]
-    stock = get_stock(item["product_name"])
+    stock = get_stock(item["product_name"], item["product_id"])
 
     return {
         "title": item["product_name"],
@@ -58,39 +58,37 @@ def scrape_deal():
     }
 
 
-def get_stock(product_name):
-    params = {
-        "store_id": STORE_ID,
-        "name": product_name,
-        "mongo": "true",
-        "limit": "1",
-        "sort": "Relevance",
-        "fields": "id,productId,stock,availability,name,inventoryLevels",
-    }
-    try:
-        resp = requests.get(
-            "https://store.storepass.co/saas/search",
-            params=params,
-            headers=HEADERS,
-            timeout=10,
-        )
-        with open("debug_stock.txt", "w") as f:
-            f.write(f"status:{resp.status_code}\n{resp.text[:3000]}")
-        if resp.ok:
-            data = resp.json()
-            products = data.get("products", data) if isinstance(data, dict) else data
-            if isinstance(products, list) and products:
-                p = products[0]
-                stock = p.get("stock")
-                if stock is not None:
-                    return f"{stock} left"
-                inv = p.get("inventoryLevels")
-                if inv and isinstance(inv, list):
-                    total = sum(i.get("quantity", 0) for i in inv)
-                    return f"{total} left"
-    except Exception as e:
-        with open("debug_stock.txt", "w") as f:
-            f.write(f"exception:{e}")
+def get_stock(product_name, product_id):
+    results = []
+    # Try 1: StorePass search by name with all required params
+    queries = [
+        {"store_id": STORE_ID, "name": product_name, "mongo": "true",
+         "limit": "1", "sort": "Relevance", "override_buylist_gt_price": "true",
+         "product_line": "All",
+         "fields": "id,productId,stock,availability,name,inventoryLevels"},
+        {"store_id": STORE_ID, "mongo": "true", "limit": "30",
+         "override_buylist_gt_price": "true", "product_line": "All",
+         "fields": "id,productId,stock,availability,name,inventoryLevels"},
+    ]
+    for params in queries:
+        try:
+            resp = requests.get(
+                "https://store.storepass.co/saas/search",
+                params=params, headers=HEADERS, timeout=10,
+            )
+            results.append(f"url:{resp.url}\nstatus:{resp.status_code}\n{resp.text[:1500]}\n")
+            if resp.ok:
+                data = resp.json()
+                products = data.get("products", [])
+                for p in products:
+                    if str(p.get("productId", "")) == str(product_id) or p.get("name", "") == product_name:
+                        stock = p.get("stock")
+                        if stock is not None:
+                            return f"{stock} left"
+        except Exception as e:
+            results.append(f"exception:{e}\n")
+    with open("debug_stock.txt", "w") as f:
+        f.write("\n===\n".join(results))
     return "N/A"
 
 
