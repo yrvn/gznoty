@@ -2,6 +2,8 @@
 """Scrape Game Nerdz Deal of the Day and notify via ntfy."""
 
 import argparse
+import json
+import os
 import re
 import sys
 import requests
@@ -10,6 +12,8 @@ from playwright.sync_api import sync_playwright
 URL = "https://www.gamenerdz.com/deal-of-the-day"
 NTFY_TOPIC = "yrvn-gz"
 NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
+LOW_STOCK_THRESHOLD = 20
+STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".last_deal.json")
 
 
 def scrape_deal():
@@ -36,12 +40,22 @@ def scrape_deal():
     return {"title": title, "price": price_str, "stock": stock}
 
 
-LOW_STOCK_THRESHOLD = 20
-
-
 def get_stock_number(stock_str):
     m = re.search(r"(\d+)", stock_str)
     return int(m.group(1)) if m else None
+
+
+def load_state():
+    try:
+        with open(STATE_FILE) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def save_state(state):
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f)
 
 
 def notify(deal, low_stock=False):
@@ -65,24 +79,28 @@ def notify(deal, low_stock=False):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test", action="store_true")
-    parser.add_argument("--low-stock", action="store_true",
-                        help="Only notify if stock < 20")
     args = parser.parse_args()
 
     deal = scrape_deal()
+    qty = get_stock_number(deal["stock"])
 
     if args.test:
         print(f"{deal['title']}|{deal['price']}|{deal['stock']}")
-
-    if args.low_stock:
-        qty = get_stock_number(deal["stock"])
-        if qty is not None and qty < LOW_STOCK_THRESHOLD:
-            notify(deal, low_stock=True)
-        else:
-            print(f"SKIP:stock is {qty}, above {LOW_STOCK_THRESHOLD}")
+        notify(deal)
         return
 
-    notify(deal)
+    state = load_state()
+    is_new_deal = state.get("title") != deal["title"]
+    already_sent_low = state.get("low_stock_sent", False)
+
+    if is_new_deal:
+        notify(deal)
+        save_state({"title": deal["title"], "low_stock_sent": False})
+    elif qty is not None and qty < LOW_STOCK_THRESHOLD and not already_sent_low:
+        notify(deal, low_stock=True)
+        save_state({"title": deal["title"], "low_stock_sent": True})
+    else:
+        print(f"SKIP:not new, stock {qty}")
 
 
 if __name__ == "__main__":
