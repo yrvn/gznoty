@@ -61,14 +61,9 @@ def scrape_deal():
     stock = stock_el.get_text(strip=True) if stock_el else None
 
     if not title:
-        scripts = soup.find_all("script")
-        for i, s in enumerate(scripts):
-            txt = s.string or ""
-            if "product" in txt.lower() or "price" in txt.lower() or "deal" in txt.lower():
-                print(f"SCRIPT#{i}:{txt[:500]}")
-        if not any("product" in (s.string or "").lower() or "price" in (s.string or "").lower() for s in scripts):
-            tags = [str(t)[:120] for t in soup.find_all(["h1","h2","h3","h4","div","span"]) if t.get("class")]
-            print("TAGS:" + "|".join(tags[:20]))
+        with open("debug.html", "w") as f:
+            f.write(resp.text)
+        print("FAIL:saved debug.html")
         sys.exit(1)
 
     return {"title": title, "price": price or "N/A", "stock": stock or "N/A"}
