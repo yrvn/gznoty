@@ -1,0 +1,38 @@
+H1.storepass-products=Deal of the Day
+DIV.JbUkR_5djIuU20yS2JAk saas storepass-products=Lords of Ragnarok: Core Box
+$59.97$159.00
+Offer ends in 23 hours, 60 minutes
+Current Stock: 170
+Maxi
+DIV.abZoeVsAuhuMnIxPe3Xw store-pass-product=Lords of Ragnarok: Core Box
+$59.97$159.00
+Offer ends in 23 hours, 60 minutes
+Current Stock: 170
+Maxi
+DIV.store-pass-product-images-section=
+DIV.E7Ikw5oztjcHwHt_G1jy store-pass-product-image-container=
+DIV.undefined store-pass-product-more-images=
+DIV.KSjzl8lnZUt0L46sHGe3 store-pass-product-info=Lords of Ragnarok: Core Box
+$59.97$159.00
+Offer ends in 23 hours, 60 minutes
+Current Stock: 170
+Maxi
+H3.ZKrkvm04lJxKct2A75ze store-pass-product-name=Lords of Ragnarok: Core Box
+DIV.REpKQ1K10CA1XMbgBMD_ store-pass-product-price-area=$59.97$159.00
+H4.tbxya3P6CXt1wyxCTlqQ P6Ybaqza5xTp8Yp6aNCQ store-pass-product-price=$59.97
+STRIKE.undefined store-pass-product-msrp=$159.00
+DIV.dXrYMxpMb3IPcmOez_Zy store-pass-product-deal-area=Offer ends in 23 hours, 60 minutes
+Current Stock: 170
+Maximum Quantity: 2
+STRONG.zGax4ZUibcJ2iNg5IrON ZKrkvm04lJxKct2A75ze store-pass-product-timer=Offer ends in 23 hours, 60 minutes
+DIV.undefined store-pass-product-stock-area=Current Stock: 170
+Maximum Quantity: 2
+DIV.undefined store-pass-product-stock-row=Current Stock: 170
+LABEL.WSiQI8gxOmnu5QOA3qYI store-pass-product-stock=Current Stock: 
+DIV.undefined store-pass-product-maximum-quantity=Maximum Quantity: 2
+LABEL.WSiQI8gxOmnu5QOA3qYI store-pass-product-maximum-quantity-label=Maximum Quantity: 
+BUTTON.Mqfic1dDuo2NjYf_Mox_ Bg2chYsJISGCZhB9PZFg QsQZgdXRotKN3Hgz_ORr store-pass-product-see-more=SEE MORE INFO
+DIV.kdRE_Ri26w5t6V9aI17B store-pass-product-description=In this 1-4 player strategic board game, you will lead a unique, asymmetric hero and their army, try
+DIV.Lc1zr2ShkUFD3dDSxYSo store-pass-product-description-text formatted-product-description=In this 1-4 player strategic board game, you will lead a unique, asymmetric hero and their army, try
+DIV.custom-product-description storepass-custom-description=In this 1-4 player strategic board game, you will lead a unique, asymmetric hero and their army, try
+INPUT.storepass-product-checkbox-all=
