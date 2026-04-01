@@ -61,9 +61,9 @@ def scrape_deal():
     stock = stock_el.get_text(strip=True) if stock_el else None
 
     if not title:
-        print("Could not find deal title. Page might have changed structure.")
-        print("Page preview:")
-        print(soup.get_text()[:1000])
+        with open("debug.html", "w") as f:
+            f.write(resp.text)
+        print("FAIL: selectors missed. Saved page to debug.html")
         sys.exit(1)
 
     return {"title": title, "price": price or "N/A", "stock": stock or "N/A"}
