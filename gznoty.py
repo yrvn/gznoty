@@ -59,17 +59,15 @@ def scrape_deal():
 
 
 def get_stock(product_id):
-    for url in STOREPASS_URLS:
-        try:
-            resp = requests.get(url, headers=HEADERS, timeout=10)
-            if not resp.ok:
-                continue
-            data = resp.json()
-            with open("debug_api.json", "w") as f:
-                json.dump({"url": url, "status": resp.status_code, "data": data}, f, indent=2)
-            return f"API_HIT:{url}"
-        except Exception:
-            continue
+    # Download storepass.js to find the real API endpoints
+    js_url = "https://cdn11.bigcommerce.com/s-ua4dd/stencil/3ca265d0-0f61-013f-f895-561599f7e7fe/e/7f85f4d0-0c65-013f-a03a-36a471d72550/storepass.js"
+    try:
+        resp = requests.get(js_url, headers=HEADERS, timeout=10)
+        if resp.ok:
+            with open("debug_storepass.js", "w") as f:
+                f.write(resp.text)
+    except Exception:
+        pass
     return "N/A"
 
 
