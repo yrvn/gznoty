@@ -89,15 +89,16 @@ def main():
     parser.add_argument("--test", action="store_true", help="Send a test notification")
     args = parser.parse_args()
 
+    deal = scrape_deal()
+
     if args.test:
-        notify({
-            "title": "Test Deal - Settlers of Catan",
-            "price": "$19.97",
-            "stock": "42 remaining",
-        })
+        print("=== Deal of the Day ===")
+        print(f"Item:  {deal['title']}")
+        print(f"Price: {deal['price']}")
+        print(f"Stock: {deal['stock']}")
+        print("(test mode — notification not sent)")
         return
 
-    deal = scrape_deal()
     notify(deal)
 
 
