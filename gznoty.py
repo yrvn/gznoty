@@ -59,7 +59,6 @@ def main():
 
     if args.test:
         print(f"{deal['title']}|{deal['price']}|{deal['stock']}")
-        return
 
     notify(deal)
 
