@@ -6,6 +6,7 @@ import json
 import os
 import re
 import sys
+import time
 import requests
 from playwright.sync_api import sync_playwright
 
@@ -66,14 +67,20 @@ def notify(deal, low_stock=False):
         title = "GN Deal of the Day"
         tags = "game_die,moneybag"
     body = f"{deal['title']}\nPrice: {deal['price']}\nStock: {deal['stock']}"
-    resp = requests.post(
-        NTFY_URL,
-        data=body.encode(),
-        headers={"Title": title, "Tags": tags, "Priority": "5" if low_stock else "3"},
-        timeout=10,
-    )
-    resp.raise_for_status()
-    print(f"OK:{body}")
+    for attempt in range(3):
+        resp = requests.post(
+            NTFY_URL,
+            data=body.encode(),
+            headers={"Title": title, "Tags": tags, "Priority": "5" if low_stock else "3"},
+            timeout=10,
+        )
+        if resp.status_code == 429:
+            time.sleep(10)
+            continue
+        resp.raise_for_status()
+        print(f"OK:{body}")
+        return
+    print("FAIL:ntfy rate limited after 3 retries")
 
 
 def main():
