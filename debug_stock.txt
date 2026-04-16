@@ -1,0 +1,2 @@
+status:200
+{"count":0,"additional_results":[],"products":[],"current_page":1,"pages":0}
